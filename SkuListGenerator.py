@@ -13,6 +13,9 @@ import threading, queue
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.chrome.options import Options
+
+
 # from selenium.webdriver.common.keys import Keys
 # import tkinter as tk
 
@@ -28,6 +31,7 @@ def simplify_listing_url_en(url):
         urlLength += 1
     return url[:urlLength]
 
+
 def simplify_listing_url_zh(url):
     count = 0
     urlLength = 0
@@ -39,10 +43,11 @@ def simplify_listing_url_zh(url):
         urlLength += 1
     return url[:urlLength]
 
+
 # threading class to generate lists of sku records
 class SkuListGeneratorThread(threading.Thread):
 
-    def __init__(self, threadId, dateQueue: queue.Queue, queueLock: threading.Lock, sRange, merchantInfo: dict):
+    def __init__(self, threadId, dateQueue: queue.Queue, queueLock: threading.Lock, sRange, merchantInfo: dict, proxy):
         threading.Thread.__init__(self)
         self.threadId = threadId
         self.dateQueue = dateQueue  # yymmdd
@@ -61,6 +66,7 @@ class SkuListGeneratorThread(threading.Thread):
         # self.isListEnd = False
         self.skuCounter = 0
         self.deliverToUS = False
+        self.proxy = proxy
 
     def run(self):
         print(f'Thread id {self.threadId} start:')
@@ -68,6 +74,7 @@ class SkuListGeneratorThread(threading.Thread):
         # return self.skuCounter
 
     '''may add a decorator'''
+
     def sku_id_generator(self, skuPointer):
         # should follow a self.skuPointer += 1
         suffix = str(skuPointer)
@@ -83,10 +90,13 @@ class SkuListGeneratorThread(threading.Thread):
             Session.find_element_by_id('twotabsearchtextbox').send_keys(skuId)
             Session.find_element_by_id('twotabsearchtextbox').submit()
             # xpath = chrome xpath
-            WebDriverWait(Session, 10, 1.5).until(lambda driver: driver.find_element_by_xpath("//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]"))
-            result = Session.find_element_by_xpath("//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]")
+            WebDriverWait(Session, 10, 1.5).until(lambda driver: driver.find_element_by_xpath(
+                "//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]"))
+            result = Session.find_element_by_xpath(
+                "//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]")
             if result.get_attribute('data-asin') != '':
-                skuTitle = result.find_element_by_xpath("//span[@class='a-size-medium a-color-base a-text-normal']").text
+                skuTitle = result.find_element_by_xpath(
+                    "//span[@class='a-size-medium a-color-base a-text-normal']").text
                 if skuTitle[:len(self.searchKey)] == self.searchKey:
                     skuAsin = result.get_attribute('data-asin')
                     skuListing = simplify_listing_url_en(
@@ -109,12 +119,18 @@ class SkuListGeneratorThread(threading.Thread):
             self.currentSkuRecord = []
             return False
 
-
     def crawl_start(self):
+        # browser configurations
         desired_capabilities = DesiredCapabilities.CHROME
         desired_capabilities["pageLoadStrategy"] = 'none'
-        session = webdriver.Chrome()
-        session.get(f"https://www.amazon.com/s?me={self.merchantInfo['merchantId']}&marketplaceID={self.merchantInfo['marketplaceId']}")
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument(f'--proxy-server=http://{self.proxy}')
+
+        session = webdriver.Chrome(chrome_options=chrome_options)
+        session.get(
+            f"https://www.amazon.com/s?me={self.merchantInfo['merchantId']}&marketplaceID={self.merchantInfo['marketplaceId']}")
         # self.check_delivery(session)
         time.sleep(0.5)
 
@@ -138,15 +154,17 @@ class SkuListGeneratorThread(threading.Thread):
         print(f'Thread {self.threadId} ends, {self.skuCounter} skus founded')
 
     def check_delivery(self, Session: webdriver.Chrome):
-        WebDriverWait(Session, 10).until(lambda driver: driver.find_element_by_xpath("//span[@id='glow-ingress-line2']"))
+        WebDriverWait(Session, 10).until(
+            lambda driver: driver.find_element_by_xpath("//span[@id='glow-ingress-line2']"))
         if Session.find_element_by_xpath("//span[@id='glow-ingress-line2']").text[:16] != 'Cincinnati 45201':
             Session.find_element_by_xpath("//span[@id='glow-ingress-line2']").click()
-            WebDriverWait(Session, 10).until(lambda driver: driver.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']"))
+            WebDriverWait(Session, 10).until(
+                lambda driver: driver.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']"))
             Session.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']").send_keys('45201')
             Session.find_element_by_xpath("//span[@id='GLUXZipUpdate']//input[@class='a-button-input']").click()
-            WebDriverWait(Session, 10).until(lambda driver: driver.find_element_by_xpath("//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']"))
+            WebDriverWait(Session, 10).until(lambda driver: driver.find_element_by_xpath(
+                "//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']"))
             Session.find_element_by_xpath("//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']").click()
-
 
     '''# deprecated
     def isListEnd(self, current_sku):

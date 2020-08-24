@@ -15,8 +15,6 @@ import queue
 import threading
 import openpyxl
 
-exitFlag = 0
-
 merchantInfo = {
     'name': 'uxcell',
     'merchantId': 'A1THAZDOWP300U',
@@ -29,7 +27,8 @@ configCrawler = {
     'startDate': '22',
     'endDate': '25',
     'searchRange': 1800,
-    'threadNum': 2
+    'threadNum': 2,
+    'proxyServers': []
 }
 
 threadIdList = [id for id in range(configCrawler['threadNum'])]
@@ -42,10 +41,15 @@ for formatDate in dateList:
     dateQueue.put(formatDate)
 queueLock.release()
 
-'''df0 = pd.DataFrame({
-        'skuId': [], 'skuListing': [], 'skuAsin': [], 'skuTitle': [], 'skuPrice': [], 'skuStock': []
-    })'''
+proxyPointer = 0
 
+def a_proxy():
+    global proxyPointer
+    if proxyPointer == len(configCrawler['proxyServers']):
+        proxyPointer = 0
+    proxy = configCrawler['proxyServers'][proxyPointer]
+    proxyPointer += 1
+    return proxy
 
 # main loop
 while not dateQueue.empty():
@@ -55,14 +59,14 @@ while not dateQueue.empty():
     try:
         wb = openpyxl.load_workbook(f"{merchantInfo['name']}_sku_list.xlsx")
     except FileNotFoundError:
-        wb = openpyxl.Workbook()
+        wb = openpyxl.workbook.Workbook()
     try:
         sheet = wb.get_sheet_by_name(f"{configCrawler['year']}{configCrawler['month']}")
     except KeyError:
         sheet = wb.create_sheet(f"{configCrawler['year']}{configCrawler['month']}")
 
     for threadId in threadIdList:
-        thread = SkuListGenerator.SkuListGeneratorThread(threadId, dateQueue, queueLock, configCrawler['searchRange'], merchantInfo)
+        thread = SkuListGenerator.SkuListGeneratorThread(threadId, dateQueue, queueLock, configCrawler['searchRange'], merchantInfo, a_proxy())
         thread.start()
         threads.append(thread)
     for thread in threads:
@@ -70,21 +74,10 @@ while not dateQueue.empty():
         for record in thread.skuRecordList:
             sheet.append(record)
 
-            '''df0 = pd.concat([df0,pd.DataFrame({
-                'skuId': [record[0]],
-                'skuListing': [record[1]],
-                'skuAsin': [record[2]],
-                'skuTitle': [record[3]],
-                'skuPrice': [record[4]],
-                'skuStock': [record[5]]
-            })])'''
         del thread
     wb.save(f"{merchantInfo['name']}_sku_list.xlsx")
 
 print('exit, writen to xlsx.')
 
 
-'''with pd.ExcelWriter(f"{merchantInfo['name']}_sku_list.xlsx", engine='openpyxl', mode='a') as writer:
-    df0.to_excel(writer, sheet_name=f"{configCrawler['year']}{configCrawler['month']}")
-'''
 
