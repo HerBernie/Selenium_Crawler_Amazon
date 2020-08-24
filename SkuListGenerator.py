@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 '''
-@project: A_Amazon_Crawler
-@author: Boyang Xia
+@project: Selenium_Crawler_Amazon
+@author: Boyang Xia (Alvin)
 @file: SkuListGenerator.py
 @time: 2020/8/18 14:54
 @desc:
@@ -71,10 +71,10 @@ class SkuListGeneratorThread(threading.Thread):
     def run(self):
         print(f'Thread id {self.threadId} start:')
         self.crawl_start()
+        print(f'Thread {self.threadId} ends, {self.skuCounter} skus founded')
         # return self.skuCounter
 
     '''may add a decorator'''
-
     def sku_id_generator(self, skuPointer):
         # should follow a self.skuPointer += 1
         suffix = str(skuPointer)
@@ -85,12 +85,12 @@ class SkuListGeneratorThread(threading.Thread):
     # generate a record of a single sku
     def simple_sku_record_generator(self, skuId, Session: webdriver.Chrome, logFile):
         try:
-            WebDriverWait(Session, 10, 1.5).until(lambda driver: driver.find_element_by_id('twotabsearchtextbox'))
+            WebDriverWait(Session, 30, 1.5).until(lambda driver: driver.find_element_by_id('twotabsearchtextbox'))
             Session.find_element_by_id('twotabsearchtextbox').clear()
             Session.find_element_by_id('twotabsearchtextbox').send_keys(skuId)
             Session.find_element_by_id('twotabsearchtextbox').submit()
             # xpath = chrome xpath
-            WebDriverWait(Session, 10, 1.5).until(lambda driver: driver.find_element_by_xpath(
+            WebDriverWait(Session, 30, 1).until(lambda driver: driver.find_element_by_xpath(
                 "//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]"))
             result = Session.find_element_by_xpath(
                 "//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]")
@@ -126,7 +126,7 @@ class SkuListGeneratorThread(threading.Thread):
         chrome_options = Options()
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')
-        chrome_options.add_argument(f'--proxy-server=http://{self.proxy}')
+        # chrome_options.add_argument(f'--proxy-server=http://{self.proxy}')
 
         session = webdriver.Chrome(chrome_options=chrome_options)
         session.get(
@@ -151,7 +151,6 @@ class SkuListGeneratorThread(threading.Thread):
         logFile.close()
         # self.root.quit()
         # self.root.mainloop()
-        print(f'Thread {self.threadId} ends, {self.skuCounter} skus founded')
 
     def check_delivery(self, Session: webdriver.Chrome):
         WebDriverWait(Session, 10).until(

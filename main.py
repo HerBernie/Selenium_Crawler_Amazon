@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 '''
-@project: A_Amazon_Crawler
-@author: Boyang Xia
+@project: Selenium_Crawler_Amazon
+@author: Boyang Xia (Alvin)
 @file: main.py
 @time: 2020/8/18 16:54
 @desc:
@@ -23,12 +23,12 @@ merchantInfo = {
 
 configCrawler = {
     'year': '19',
-    'month': '03',
-    'startDate': '22',
-    'endDate': '25',
+    'month': '04',
+    'startDate': '1',
+    'endDate': '6',
     'searchRange': 1800,
-    'threadNum': 2,
-    'proxyServers': []
+    'threadNum': 3,
+    'proxyServers': ['103.39.210.230:28803', '103.39.215.124:28803']
 }
 
 threadIdList = [id for id in range(configCrawler['threadNum'])]
@@ -55,27 +55,28 @@ def a_proxy():
 while not dateQueue.empty():
     threads = []
 
-    # open spreadsheet workbook
-    try:
-        wb = openpyxl.load_workbook(f"{merchantInfo['name']}_sku_list.xlsx")
-    except FileNotFoundError:
-        wb = openpyxl.workbook.Workbook()
-    try:
-        sheet = wb.get_sheet_by_name(f"{configCrawler['year']}{configCrawler['month']}")
-    except KeyError:
-        sheet = wb.create_sheet(f"{configCrawler['year']}{configCrawler['month']}")
-
     for threadId in threadIdList:
         thread = SkuListGenerator.SkuListGeneratorThread(threadId, dateQueue, queueLock, configCrawler['searchRange'], merchantInfo, a_proxy())
         thread.start()
         threads.append(thread)
     for thread in threads:
         thread.join()
+
+        # open spreadsheet workbook
+        try:
+            wb = openpyxl.load_workbook(f"{merchantInfo['name']}_sku_list.xlsx")
+        except FileNotFoundError:
+            wb = openpyxl.workbook.Workbook()
+        try:
+            sheet = wb[f"{configCrawler['year']}{configCrawler['month']}"]
+        except KeyError:
+            sheet = wb.create_sheet(f"{configCrawler['year']}{configCrawler['month']}")
+
         for record in thread.skuRecordList:
             sheet.append(record)
 
         del thread
-    wb.save(f"{merchantInfo['name']}_sku_list.xlsx")
+        wb.save(f"{merchantInfo['name']}_sku_list.xlsx")
 
 print('exit, writen to xlsx.')
 
