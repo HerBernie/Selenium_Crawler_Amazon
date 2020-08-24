@@ -118,15 +118,6 @@ class SkuListGeneratorThread(threading.Thread):
         # self.check_delivery(session)
         time.sleep(0.5)
 
-        '''# display records
-        self.root.title(f'Thread {self.threadId}')
-        scrollbar = tk.Scrollbar(self.root)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        text = tk.Text(self.root, yscrollcommand=scrollbar.set)
-        text.pack(side=tk.LEFT, fill=tk.BOTH)
-        scrollbar.config(command=text.yview)
-        '''
-
         logFile = open(f'Log_{self.searchKey}_{self.date[:4]}.txt', mode='a')
 
         for skuPointer in range(1, self.searchRange):
@@ -135,12 +126,9 @@ class SkuListGeneratorThread(threading.Thread):
             if record:
                 self.skuRecordList.append(self.currentSkuRecord)
                 self.skuCounter += record
-                '''
-                text.insert(tk.END, f"[{self.skuCounter}]{self.currentSkuRecord}")
-                text.insert(tk.INSERT, '\n')
-                text.see(tk.END)'''
+
+                logFile.write(f'[{self.threadId}][{self.skuCounter}][{skuId}][{record}]\n')
             print(f'[{self.threadId}][{self.skuCounter}][{skuId}][{record}]:{self.currentSkuRecord}')
-            logFile.write(f'[{self.threadId}][{self.skuCounter}][{skuId}][{record}]\n')
             # if current_sku != None:
             #   self.skuRecordList.append(current_sku)
         session.close()
