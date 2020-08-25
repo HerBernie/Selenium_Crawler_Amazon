@@ -24,15 +24,16 @@ merchantInfo = {
 configCrawler = {
     'year': '19',
     'month': '04',
-    'startDate': '1',
-    'endDate': '6',
+    'startDate': '01',
+    'endDate': '06',
     'searchRange': 1800,
     'threadNum': 3,
     'proxyServers': ['103.39.210.230:28803', '103.39.215.124:28803']
 }
 
 threadIdList = [id for id in range(configCrawler['threadNum'])]
-dateList = [configCrawler['year']+configCrawler['month']+str(date) for date in range(int(configCrawler['startDate']), int(configCrawler['endDate'])+1)]
+dateList = [configCrawler['year']+configCrawler['month']+str(date).rjust(2, '0') for date in range(int(configCrawler['startDate']), int(configCrawler['endDate'])+1)]
+# dateList = ['190406', '190408']
 dateQueue = queue.Queue(1 + int(configCrawler['endDate']) - int(configCrawler['startDate']))
 queueLock = threading.Lock()
 
