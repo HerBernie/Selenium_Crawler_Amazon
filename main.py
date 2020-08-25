@@ -72,6 +72,7 @@ while not dateQueue.empty():
             sheet = wb[f"{configCrawler['year']}{configCrawler['month']}"]
         except KeyError:
             sheet = wb.create_sheet(f"{configCrawler['year']}{configCrawler['month']}")
+            sheet.append(['SKU', 'LINK', 'ASIN', 'TITLE', 'PRICE', 'STOCK'])
 
         for record in thread.skuRecordList:
             sheet.append(record)
