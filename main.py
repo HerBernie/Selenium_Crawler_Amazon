@@ -9,78 +9,94 @@
 '''
 
 import SkuListGenerator
+import reviewsCrawler
 # import time
 # import pandas as pd
+import json
 import queue
 import threading
 import openpyxl
 
-merchantInfo = {
-    'name': 'uxcell',
-    'merchantId': 'A1THAZDOWP300U',
-    'marketplaceId': 'ATVPDKIKX0DER'
-}
+# load configurations
+merchantInfo = json.load(open('merchantInfo.json', mode='r'))
 
-configCrawler = {
-    'year': '19',
-    'month': '04',
-    'startDate': '01',
-    'endDate': '06',
-    'searchRange': 1800,
-    'threadNum': 3,
-    'proxyServers': ['103.39.210.230:28803', '103.39.215.124:28803']
-}
+def sku_crawler():
+    skuCrawlerConfig = json.load(open('skuCrawlerConfig.json', mode='r'))
 
-threadIdList = [id for id in range(configCrawler['threadNum'])]
-dateList = [configCrawler['year']+configCrawler['month']+str(date).rjust(2, '0') for date in range(int(configCrawler['startDate']), int(configCrawler['endDate'])+1)]
-# dateList = ['190406', '190408']
-dateQueue = queue.Queue(1 + int(configCrawler['endDate']) - int(configCrawler['startDate']))
-queueLock = threading.Lock()
+    def a_proxy():
+        global proxyPointer
+        if proxyPointer == len(skuCrawlerConfig['proxyServers']):
+            proxyPointer = 0
+        proxy = skuCrawlerConfig['proxyServers'][proxyPointer]
+        proxyPointer += 1
+        return proxy
 
-queueLock.acquire()
-for formatDate in dateList:
-    dateQueue.put(formatDate)
-queueLock.release()
+    threadIdList = [id for id in range(skuCrawlerConfig['threadNum'])]
+    dateList = [skuCrawlerConfig['year']+skuCrawlerConfig['month']+str(date).rjust(2, '0') for date in range(int(skuCrawlerConfig['startDate']), int(skuCrawlerConfig['endDate'])+1)]
+    # dateList = ['190406', '190408']
+    dateQueue = queue.Queue(1 + int(skuCrawlerConfig['endDate']) - int(skuCrawlerConfig['startDate']))
+    queueLock = threading.Lock()
 
-proxyPointer = 0
+    queueLock.acquire()
+    for formatDate in dateList:
+        dateQueue.put(formatDate)
+    queueLock.release()
 
-def a_proxy():
-    global proxyPointer
-    if proxyPointer == len(configCrawler['proxyServers']):
-        proxyPointer = 0
-    proxy = configCrawler['proxyServers'][proxyPointer]
-    proxyPointer += 1
-    return proxy
+    proxyPointer = 0
 
-# main loop
-while not dateQueue.empty():
-    threads = []
+    # main loop
+    while not dateQueue.empty():
+        threads = []
 
-    for threadId in threadIdList:
-        thread = SkuListGenerator.SkuListGeneratorThread(threadId, dateQueue, queueLock, configCrawler['searchRange'], merchantInfo, a_proxy())
-        thread.start()
-        threads.append(thread)
-    for thread in threads:
-        thread.join()
+        for threadId in threadIdList:
+            thread = SkuListGenerator.SkuListGeneratorThread(threadId, dateQueue, queueLock, skuCrawlerConfig['searchRange'], merchantInfo, a_proxy())
+            thread.start()
+            threads.append(thread)
+        for thread in threads:
+            thread.join()
 
-        # open spreadsheet workbook
-        try:
-            wb = openpyxl.load_workbook(f"{merchantInfo['name']}_sku_list.xlsx")
-        except FileNotFoundError:
-            wb = openpyxl.workbook.Workbook()
-        try:
-            sheet = wb[f"{configCrawler['year']}{configCrawler['month']}"]
-        except KeyError:
-            sheet = wb.create_sheet(f"{configCrawler['year']}{configCrawler['month']}")
-            sheet.append(['SKU', 'LINK', 'ASIN', 'TITLE', 'PRICE', 'STOCK'])
+            # open spreadsheet workbook
+            try:
+                wb = openpyxl.load_workbook(f"{merchantInfo['name']}_sku_list.xlsx")
+            except FileNotFoundError:
+                wb = openpyxl.workbook.Workbook()
+            try:
+                sheet = wb[f"{skuCrawlerConfig['year']}{skuCrawlerConfig['month']}"]
+            except KeyError:
+                sheet = wb.create_sheet(f"{skuCrawlerConfig['year']}{skuCrawlerConfig['month']}")
+                sheet.append(['SKU', 'LINK', 'ASIN', 'TITLE', 'PRICE', 'STOCK'])
 
-        for record in thread.skuRecordList:
-            sheet.append(record)
+            for record in thread.skuRecordList:
+                sheet.append(record)
 
-        del thread
-        wb.save(f"{merchantInfo['name']}_sku_list.xlsx")
+            del thread
+            wb.save(f"{merchantInfo['name']}_sku_list.xlsx")
 
-print('exit, writen to xlsx.')
+    print('exit, writen to xlsx.')
+
+def reviews_crawler():
+    aCrawler = reviewsCrawler.ReviewsCrawler(merchantInfo)
+    aCrawler.start()
+    if input() == '0':
+        aCrawler.exitFlag = 1
+
+
+exitFlag = 0
+
+while exitFlag == 0:
+    print('[1]: skuCrawler')
+    print('[2]: reviewsCrawler')
+    str = input('enter[1/2](0 to exit): ')
+    if str == '1':
+        sku_crawler()
+    elif str == '2':
+        reviews_crawler()
+    elif str == '0':
+        exitFlag = 1
+    else:
+        print('error')
+
+
 
 
 
