@@ -35,16 +35,19 @@ class ReviewsCrawler():
         _thread.start_new_thread(self.console)
 
         # browser configurations
-        desired_capabilities = DesiredCapabilities.CHROME
-        desired_capabilities["pageLoadStrategy"] = 'none'
+        # desired_capabilities = DesiredCapabilities.CHROME
+        # desired_capabilities["pageLoadStrategy"] = 'none'
         chrome_options = Options()
         # chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')
 
         session = webdriver.Chrome(chrome_options=chrome_options)
-        time.sleep(0.5)
+        session.get(
+            f"https://www.amazon.com/s?i=merchant-items&me={self.merchantInfo['merchantId']}&page={self.page}&marketplaceID={self.merchantInfo['marketplaceId']}")
+        self.check_delivery(session)
+        time.sleep(1)
 
-        while self.exitFlag == 0:
+        while self.exitFlag == 0 and self.page <= 150:
             session.get(f"https://www.amazon.com/s?i=merchant-items&me={self.merchantInfo['merchantId']}&page={self.page}&marketplaceID={self.merchantInfo['marketplaceId']}")
             self.iterate_through_plist(session)
 
@@ -64,21 +67,26 @@ class ReviewsCrawler():
             wb.save(f"{self.merchantInfo['name']}_reviews.xlsx")
 
             self.reviewList = []
+            logFile = open('log_review_crawler.txt', mode='a+')
+            logFile.write(f"{time.ctime()} {self.merchantInfo['name']} {self.page} page written\n")
+            logFile.close()
             self.page += 1
 
     def iterate_through_plist(self, session: webdriver.Chrome):
         wait = WebDriverWait(session, 10)
         wait.until(lambda driver: driver.find_element_by_xpath(
-            "//div[@class='s-main-slot s-result-list s-search-results sg-row']"))
+            "//div[@class='s-main-slot s-result-list s-search-results sg-row']").is_displayed())
         # results = session.find_elements_by_xpath("//div[@data-component-type='s-search-result']")
-        for index in range(0, 15):
-            result = session.find_element_by_xpath(
-                f"//div[@data-index='{index}']")
-            webdriver.ActionChains(session).move_to_element(result).perform()
-            time.sleep(0.5)
+        for index in range(0, 16):
             try:
-                trigger = session.find_element_by_xpath(f"//div[{index}]/div[1]/span[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/span[1]/span[1]/a[1]")
+                result = session.find_element_by_xpath(
+                    f"//div[@data-index='{index}']")
+                webdriver.ActionChains(session).move_to_element(result).perform()
+                time.sleep(0.5)
+
+                trigger = session.find_element_by_xpath(f"//div[@data-index='{index}']//a[@class='a-popover-trigger a-declarative']")
                     # ("//a[@class='a-popover-trigger a-declarative']")
+                    # //div[{index}]/div[1]/span[1]/div[1]/div[1]/div[2]/div[2]/div[1]/div[1]/div[1]/div[1]/div[2]/div[1]/span[1]/span[1]/a[1]
                 webdriver.ActionChains(session).move_to_element(trigger).perform()
                 # wait.until(lambda driver: driver.find_element_by_xpath("//div[@class='a-popover-content']").is_displayed())
                 time.sleep(1)
@@ -96,7 +104,7 @@ class ReviewsCrawler():
                     self.get_review(wait, asin, reviewLink, session)
                     session.back()
                     wait.until(lambda driver: driver.find_element_by_xpath(
-                        "//div[@class='s-main-slot s-result-list s-search-results sg-row']"))
+                        "//div[@class='s-main-slot s-result-list s-search-results sg-row']").is_displayed())
 
             except Exception as error:
                 print(error)
@@ -110,9 +118,25 @@ class ReviewsCrawler():
             reviewId = review.get_attribute('id')
             reviewer = session.find_element_by_xpath(f"//div[@id='{reviewId}']//span[@class='a-profile-name']").text
             reviewDate = session.find_element_by_xpath(f"//div[@id='{reviewId}']//span[@data-hook='review-date']").text
-            form = session.find_element_by_xpath(f"//div[@id='{reviewId}']//span[@data-hook='format-strip-linkless']").text
+            try:
+                form = session.find_element_by_xpath(f"//div[@id='{reviewId}']//span[@data-hook='format-strip-linkless']").text
+            except:
+                form = ''
             reviewTitle = session.find_element_by_xpath(f"//div[@id='{reviewId}']//a[@data-hook='review-title']/span[1]").text
             reviewBody = session.find_element_by_xpath(f"//div[@id='{reviewId}']//div[@data-hook='review-collapsed']/span[1]").text
             self.reviewList.append([asin, productRating, reviewLink, reviewer, reviewDate, form, reviewTitle, reviewBody])
             print([asin, productRating, reviewLink, reviewer, reviewDate, form, reviewTitle, reviewBody])
             pass
+
+    def check_delivery(self, session: webdriver.Chrome):
+        WebDriverWait(session, 10).until(
+            lambda driver: driver.find_element_by_xpath("//span[@id='glow-ingress-line2']"))
+        if session.find_element_by_xpath("//span[@id='glow-ingress-line2']").text[:16] != 'Cincinnati 45201':
+            session.find_element_by_xpath("//span[@id='glow-ingress-line2']").click()
+            WebDriverWait(session, 10).until(
+                lambda driver: driver.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']"))
+            session.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']").send_keys('45201')
+            session.find_element_by_xpath("//span[@id='GLUXZipUpdate']//input[@class='a-button-input']").click()
+            WebDriverWait(session, 10).until(lambda driver: driver.find_element_by_xpath(
+                "//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']"))
+            session.find_element_by_xpath("//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']").click()

@@ -1,0 +1,9 @@
+{
+    "year": "19",
+    "month": "04",
+    "startDate": "01",
+    "endDate": "06",
+    "searchRange": 1800,
+    "threadNum": 3,
+    "proxyServers": ["IP:PORT", "IP:PORT"]
+}
