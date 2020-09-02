@@ -83,16 +83,16 @@ class SkuListGeneratorThread(threading.Thread):
         return f'a{self.date}00ux{suffix}'
 
     # generate a record of a single sku
-    def simple_sku_record_generator(self, skuId, Session: webdriver.Chrome, logFile):
+    def simple_sku_record_generator(self, skuId, session: webdriver.Chrome, logFile):
         try:
-            WebDriverWait(Session, 30, 1.5).until(lambda driver: driver.find_element_by_id('twotabsearchtextbox'))
-            Session.find_element_by_id('twotabsearchtextbox').clear()
-            Session.find_element_by_id('twotabsearchtextbox').send_keys(skuId)
-            Session.find_element_by_id('twotabsearchtextbox').submit()
+            WebDriverWait(session, 30, 1.5).until(lambda driver: driver.find_element_by_id('twotabsearchtextbox'))
+            session.find_element_by_id('twotabsearchtextbox').clear()
+            session.find_element_by_id('twotabsearchtextbox').send_keys(skuId)
+            session.find_element_by_id('twotabsearchtextbox').submit()
             # xpath = chrome xpath
-            WebDriverWait(Session, 30, 1).until(lambda driver: driver.find_element_by_xpath(
+            WebDriverWait(session, 30, 1).until(lambda driver: driver.find_element_by_xpath(
                 "//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]"))
-            result = Session.find_element_by_xpath(
+            result = session.find_element_by_xpath(
                 "//div[@class='s-main-slot s-result-list s-search-results sg-row']/div[1]")
             if result.get_attribute('data-asin') != '':
                 skuTitle = result.find_element_by_xpath(
@@ -152,18 +152,18 @@ class SkuListGeneratorThread(threading.Thread):
         # self.root.quit()
         # self.root.mainloop()
 
-    def check_delivery(self, Session: webdriver.Chrome):
-        WebDriverWait(Session, 10).until(
+    def check_delivery(self, session: webdriver.Chrome):
+        WebDriverWait(session, 10).until(
             lambda driver: driver.find_element_by_xpath("//span[@id='glow-ingress-line2']"))
-        if Session.find_element_by_xpath("//span[@id='glow-ingress-line2']").text[:16] != 'Cincinnati 45201':
-            Session.find_element_by_xpath("//span[@id='glow-ingress-line2']").click()
-            WebDriverWait(Session, 10).until(
+        if session.find_element_by_xpath("//span[@id='glow-ingress-line2']").text[:16] != 'Cincinnati 45201':
+            session.find_element_by_xpath("//span[@id='glow-ingress-line2']").click()
+            WebDriverWait(session, 10).until(
                 lambda driver: driver.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']"))
-            Session.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']").send_keys('45201')
-            Session.find_element_by_xpath("//span[@id='GLUXZipUpdate']//input[@class='a-button-input']").click()
-            WebDriverWait(Session, 10).until(lambda driver: driver.find_element_by_xpath(
+            session.find_element_by_xpath("//input[@id='GLUXZipUpdateInput']").send_keys('45201')
+            session.find_element_by_xpath("//span[@id='GLUXZipUpdate']//input[@class='a-button-input']").click()
+            WebDriverWait(session, 10).until(lambda driver: driver.find_element_by_xpath(
                 "//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']"))
-            Session.find_element_by_xpath("//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']").click()
+            session.find_element_by_xpath("//div[@class='a-popover-footer']//input[@id='GLUXConfirmClose']").click()
 
     '''# deprecated
     def isListEnd(self, current_sku):
