@@ -59,7 +59,7 @@ class SkuListGeneratorThread(threading.Thread):
         # self.skuPointer = 0
         # self.emptyCounter =
         self.merchantInfo = merchantInfo
-        self.searchKey = merchantInfo.get('name', 'uxcell')
+        self.searchKey = merchantInfo.get('name', 'sample')
         self.searchRange = sRange
         self.currentSkuRecord = []
         self.skuRecordList = []
