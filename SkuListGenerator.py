@@ -74,13 +74,10 @@ class SkuListGeneratorThread(threading.Thread):
         print(f'Thread {self.threadId} ends, {self.skuCounter} skus founded')
         # return self.skuCounter
 
-    '''may add a decorator'''
+    # this function is censored because it may contains confidential information
     def sku_id_generator(self, skuPointer):
-        # should follow a self.skuPointer += 1
-        suffix = str(skuPointer)
-        while len(suffix) < 4:
-            suffix = '0' + suffix
-        return f'a{self.date}00ux{suffix}'
+        # censored
+        return f'censored'
 
     # generate a record of a single sku
     def simple_sku_record_generator(self, skuId, session: webdriver.Chrome, logFile):
