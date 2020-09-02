@@ -6,4 +6,4 @@ Crawlers carried out through *Selenium*.
 
 The seller's name, merchant id, and marketplace id should be in *merchantId.json*.
 
-Write results to Excell through *openpyxl* module.
+Write results to Excel through *openpyxl* module.
